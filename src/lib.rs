@@ -4,18 +4,28 @@ use std::fmt::Debug;
 use std::collections::HashSet;
 
 #[derive(Clone)]
-enum Tile {
+pub enum Tile {
 	Mine,
 	Hidden(u8),
 	Visible(u8)
 }
 
+impl Tile {
+	fn dfs_valid(&self) -> bool {
+		match self {
+			Tile::Visible(_) => false,
+			Tile::Mine => false,
+			_ => true
+		}
+	}
+
+}
 
 impl Debug for Tile {
 	fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
 		match self {
-			Self::Hidden(val) => write!(f, "{}", '#'),
-			Self::Visible(val) => write!(f, "{}", val),
+			Self::Hidden(val) => write!(f, "h{}", val),
+			Self::Visible(val) => write!(f, "v{}", val),
 			Self::Mine => write!(f, "{}", 'X')
 		}
 	}
@@ -87,6 +97,19 @@ impl Session {
 		}
 	}
 
+	pub fn from(board: Vec<Vec<Tile>>) -> Self {
+		Self {
+			des: "Test".to_string(),
+			state: State::Active,
+			score: 0,
+			board
+		}
+	}
+
+	pub fn get_board(&self) -> Vec<Vec<Tile>> {
+		self.board.clone()
+	}
+
 	pub fn check_cord(&mut self, x: usize, y: usize) {
 		match self.board[y][x] {
 			Tile::Hidden(val) => {
@@ -101,12 +124,13 @@ impl Session {
 
 	pub fn print_session(&self) {
 		let mut board = String::new();
+		board.push('\n');
 		for row in self.board.clone() {
 			for col in row {
 				match col {
-					Tile::Mine => {board.push_str("[ ]")},
-					Tile::Hidden(_) => {board.push_str("[ ]")},
-					Tile::Visible(val) => {board.push_str(format!("[{}]",val).as_str())},
+					Tile::Mine => { board.push_str("[ ]") },
+					Tile::Hidden(_) => { board.push_str("[ ]") },
+					Tile::Visible(val) => { board.push_str(format!("[{}]", val).as_str()) },
 				}
 //				board.push('');
 			}
@@ -114,7 +138,41 @@ impl Session {
 		}
 
 		print!("{}", board);
+	}
 
+	pub fn reveal(&mut self, x: usize, y: usize) {
+		match self.board[y][x] {
+			Tile::Mine => self.state = State::Lose,
+			Tile::Visible(_) => println!("Tile is already visable."),
+			Tile::Hidden(_) => Self::dfs(&mut self.board, x, y)
+		}
+	}
+
+	fn dfs(board: &mut Vec<Vec<Tile>>, x: usize, y: usize) {
+		if !board[y][x].dfs_valid() {
+			return
+		}
+
+		// look up
+		if board.get(y + 1).is_some() &&
+			board[y].get(x).is_some() &&
+			board[y + 1][x].dfs_valid()
+			{
+			unimplemented!()
+		}
+
+		// look down
+		if board.get(y - 1).is_some() && board[y].get(x).is_some() {}
+
+		// look right
+		if board.get(y).is_some() && board[y].get(x + 1).is_some() {
+			unimplemented!()
+		}
+
+		// look left
+		if board.get(y).is_some() && board[y].get(x - 1).is_some() {
+			unimplemented!()
+		}
 	}
 }
 
@@ -132,6 +190,7 @@ impl Debug for Session {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use insta::assert_debug_snapshot_matches;
 
 	#[test]
 	fn it_works() {
@@ -141,13 +200,14 @@ mod tests {
 	#[test]
 	fn session_debug_test() {
 		let session = Session::new(12, 12, 12);
-		dbg!(session);
+		session.print_session();
 	}
 
 	#[test]
 	fn dfs_test() {
-		let max= 3;
-		let mut matrix : Vec<Vec<Tile>>= (0..4).map(|i| {
+		let max = 3;
+
+		let mut matrix: Vec<Vec<Tile>> = (0..4).map(|i| {
 			if i == 0 || i == max {
 				return vec![Tile::Hidden(1); max + 1];
 			} else {
@@ -158,11 +218,21 @@ mod tests {
 			}
 		}
 		)
-			.collect();
+		                                       .collect();
 
-//
+		let mut sess = Session::from(matrix);
 
-		dbg!(matrix);
+//		dbg!(sess.get_board());
 
+		let expect = vec![
+			vec![Tile::Visible(1); 4],
+			vec![Tile::Visible(1), Tile::Visible(0), Tile::Visible(0), Tile::Visible(1)],
+			vec![Tile::Visible(1), Tile::Visible(0), Tile::Visible(0), Tile::Visible(1)],
+			vec![Tile::Visible(1); 4],
+		];
+
+//		assert_eq!(format!("{:?}",sess.get_board()), format!("{:?}",expect));
+
+		sess.reveal(0, 0);
 	}
 }
