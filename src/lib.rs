@@ -284,11 +284,7 @@ mod tests {
 	}
 
 	#[test]
-	fn it_works() {
-		assert_eq!(2 + 2, 4);
-	}
-
-	#[test]
+	// TODO: create a test that uses assert macro in some way.
 	fn session_debug_test() {
 		let session = Session::new(12, 12, 12);
 		session.print_session();
@@ -313,8 +309,6 @@ mod tests {
 
 		let mut sess = Session::from(matrix);
 
-//		dbg!(sess.get_board());
-
 		let expect = vec![
 			vec![Tile::Visible(1); 4],
 			vec![Tile::Visible(1), Tile::Visible(0), Tile::Visible(0), Tile::Visible(1)],
@@ -323,7 +317,6 @@ mod tests {
 		];
 
 		sess.reveal(0, 0);
-//		dbg!(&sess.get_board());
 
 		assert_eq!(format!("{:?}", sess.get_board()), format!("{:?}", expect));
 	}
@@ -403,7 +396,6 @@ mod tests {
 
 		let mut sess = Session::from(matrix);
 		sess.board[1][2] = Tile::Mine;
-
 
 		assert_ne!(sess.print_session(), sess.print_answer());
 	}
