@@ -1,13 +1,13 @@
 use rand::{thread_rng, Rng};
-use std::{fmt, io};
-use std::fmt::Debug;
 use std::collections::HashSet;
+use std::fmt::Debug;
+use std::{fmt, io};
 
 #[derive(Clone)]
 pub enum Tile {
 	Mine,
 	Hidden(u8),
-	Visible(u8)
+	Visible(u8),
 }
 
 impl Tile {
@@ -15,8 +15,15 @@ impl Tile {
 		match self {
 			Tile::Visible(_) => false,
 			Tile::Mine => false,
-			_ => true
+			_ => true,
 		}
+	}
+
+	fn is_mine(&self) -> bool {
+		if let Tile::Mine = self {
+			return true
+		}
+		false
 	}
 	/// swaps a Tile Hidden to Visible
 	fn set_visible(&mut self) {
@@ -40,7 +47,7 @@ trait Board {
 	type Item;
 
 	/// create a new game board by X and Y size.
-	fn new_board(level: usize, x_size: usize, y_size: usize) -> Self::Item;
+	fn new_board(level: usize, x_size: usize, y_size: usize, set_proxy: bool) -> Self::Item;
 	/// create a new game blank board by X and Y size.
 	fn blank_board(n: usize, m: usize) -> Self::Item;
 
@@ -52,23 +59,46 @@ trait Board {
 		let mut cords = vec![];
 		while cords.len() < number {
 			let mut c = (thread_rng().gen_range(0, n), thread_rng().gen_range(0, m));
-			if !cords.contains(&c) { cords.push(c) }
+			if !cords.contains(&c) {
+				cords.push(c)
+			}
 		}
 		cords
 	}
+
 	/// converts a string representation into a board of associated type
 	fn from_string<S: Into<String>>(input: S, hidden: bool) -> Self::Item;
+
+	fn get_neighbor(board: Self::Item, y: usize, x: usize) -> Self::Item;
+
+	const DIRS: [(isize, isize); 8] =
+		[
+			(-1, 0),
+			(-1, 1),
+			(0, 1),
+			(1, 1),
+			(1, 0),
+			(1, -1),
+			(0, -1),
+			(-1, -1),
+		];
+
 }
 
 impl Board for Tile {
 	type Item = io::Result<Vec<Vec<Tile>>>;
 
 	/// create a new game board by X and Y size with mine randomly place.
-	fn new_board(level: usize, x_size: usize, y_size: usize) -> Self::Item {
+	fn new_board(level: usize, x_size: usize, y_size: usize, set_proxy: bool) -> Self::Item {
 		let mut board = Self::blank_board(x_size, y_size)?;
 
-		for c in Self::gen_mine_coords(level * 3, x_size, y_size) {
+		let mines = Self::gen_mine_coords(level, x_size, y_size);
+
+		for c in &mines {
 			board[c.0][c.1] = Tile::Mine;
+			if set_proxy {
+				board = Self::get_neighbor(Ok(board), c.0, c.1).unwrap();
+			}
 		}
 
 		Ok(board)
@@ -76,33 +106,59 @@ impl Board for Tile {
 
 	fn blank_board(x_size: usize, y_size: usize) -> Self::Item {
 		let board: Vec<Vec<Tile>> = (0..y_size)
-			.map(|_| {
-				(0..x_size).map(|_| Tile::Hidden(0))
-				           .collect::<Vec<Tile>>()
-			}).collect();
+			.map(|_| (0..x_size).map(|_| Tile::Hidden(0)).collect::<Vec<Tile>>())
+			.collect();
 		Ok(board)
 	}
 
 	/// Converts a string representation into a board of Tile types.
 	fn from_string<S: Into<String>>(input: S, hidden: bool) -> Self::Item {
-		let board: Vec<Vec<Tile>> = input.into().split_whitespace()
-		                                 .into_iter()
-		                                 .map(|x| {
-			                                 x.split(',')
-			                                  .into_iter()
-			                                  .map(|x| {
-				                                  if let Ok(value) = x.parse::<u8>() {
-					                                  if hidden {
-						                                  return Tile::Hidden(value)
-					                                  }
-					                                  return Tile::Visible(value)
-				                                  }
-				                                  Tile::Mine
-			                                  })
-			                                  .collect::<Vec<Tile>>()
-		                                 }
-		                                 )
-		                                 .collect();
+		let board: Vec<Vec<Tile>> = input
+			.into()
+			.split_whitespace()
+			.into_iter()
+			.map(|x| {
+				x.split(',')
+				 .into_iter()
+				 .map(|x| {
+					 if let Ok(value) = x.parse::<u8>() {
+						 if hidden {
+							 return Tile::Hidden(value);
+						 }
+						 return Tile::Visible(value);
+					 }
+					 Tile::Mine
+				 })
+				 .collect::<Vec<Tile>>()
+			})
+			.collect();
+		Ok(board)
+	}
+
+	fn get_neighbor(board: Self::Item, y: usize, x: usize) -> Self::Item {
+		if board.is_err() {
+			panic!("Error: {:?}", board);
+		}
+		let mut board = board.unwrap();
+
+
+		for dir in &Self::DIRS {
+			if y as isize + dir.0 < 0 || x as isize + dir.1 < 0 {
+				continue
+			}
+
+			if board.get((y as isize + dir.0) as usize).is_some() && board[(y as isize + dir.0) as usize].get((x as isize + dir.1) as usize).is_some() {
+				if board[(y as isize + dir.0) as usize][(x as isize + dir.1) as usize].is_mine() {
+					continue
+				}
+				board[(y as isize + dir.0) as usize][(x as isize + dir.1) as usize] = match board[(y as isize + dir.0) as usize][(x as isize + dir.1) as usize] {
+					Tile::Hidden(val) => Tile::Hidden(val + 1),
+					Tile::Visible(val) => Tile::Visible(val + 1),
+					_ => unreachable!()
+				};
+			}
+		}
+
 		Ok(board)
 	}
 }
@@ -111,7 +167,7 @@ impl Board for Tile {
 enum State {
 	Active,
 	Win,
-	Lose
+	Lose,
 }
 
 pub struct MineSweeper {
@@ -131,7 +187,7 @@ impl Session {
 			des: "Test".to_string(),
 			state: State::Active,
 			score: 0,
-			board: Tile::new_board(level, x_size, y_size).unwrap()
+			board: Tile::new_board(level, x_size, y_size, true).unwrap(),
 		}
 	}
 
@@ -140,7 +196,7 @@ impl Session {
 			des: "Test".to_string(),
 			state: State::Active,
 			score: 0,
-			board
+			board,
 		}
 	}
 
@@ -154,7 +210,6 @@ impl Session {
 				println!("Safe: {}", &val);
 				self.board[y][x] = Tile::Visible(val)
 			}
-			,
 			Tile::Mine => println!("Boom!"),
 			Tile::Visible(_) => {}
 		}
@@ -166,11 +221,11 @@ impl Session {
 		for row in self.board.clone() {
 			for col in row {
 				match col {
-					Tile::Mine => { board.push_str("[ ]") },
-					Tile::Hidden(_) => { board.push_str("[ ]") },
-					Tile::Visible(val) => { board.push_str(format!("[{}]", val).as_str()) },
+					Tile::Mine => board.push_str("[ ]"),
+					Tile::Hidden(_) => board.push_str("[ ]"),
+					Tile::Visible(val) => board.push_str(format!("[{}]", val).as_str()),
 				}
-//				board.push('');
+				//				board.push('');
 			}
 			board.push('\n');
 		}
@@ -186,11 +241,11 @@ impl Session {
 		for row in self.board.clone() {
 			for col in row {
 				match col {
-					Tile::Mine => { board.push_str("[💣]") },
-					Tile::Hidden(val) => { board.push_str(format!("[{}]", val).as_str()) },
-					Tile::Visible(val) => { board.push_str(format!("[{}]", val).as_str()) },
+					Tile::Mine => board.push_str("[B]"),
+					Tile::Hidden(val) => board.push_str(format!("[{}]", val).as_str()),
+					Tile::Visible(val) => board.push_str(format!("[{}]", val).as_str()),
 				}
-//				board.push('');
+				//				board.push('');
 			}
 			board.push('\n');
 		}
@@ -203,24 +258,21 @@ impl Session {
 		match self.board[y][x] {
 			Tile::Mine => self.state = State::Lose,
 			Tile::Visible(_) => println!("Tile is already visable."),
-			Tile::Hidden(_) => Self::dfs(&mut self.board, x, y)
+			Tile::Hidden(_) => Self::dfs(&mut self.board, x, y),
 		}
 	}
 
 	fn dfs(board: &mut Vec<Vec<Tile>>, x: usize, y: usize) {
 		//check if tile is invalid
 		if !board[y][x].dfs_valid() {
-			return
+			return;
 		}
 
 		// if valid then the tile will be swapped to visible.
 		board[y][x].set_visible();
 
 		// look up
-		if y as isize - 1 >= 0 &&
-			board.get(y - 1).is_some() &&
-			board[y].get(x).is_some()
-		{
+		if y as isize - 1 >= 0 && board.get(y - 1).is_some() && board[y].get(x).is_some() {
 			Self::dfs(board, x, y - 1);
 		}
 
@@ -251,7 +303,6 @@ impl Debug for Session {
 	}
 }
 
-
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -259,13 +310,13 @@ mod tests {
 
 	#[test]
 	fn test_from_string() {
-		let m: String =
-			"
+		let m: String = "
     1,1,1,1
     1,0,X,1
     1,0,0,1
     1,1,1,1
-    ".to_string();
+    "
+			.to_string();
 
 		let matrix = Tile::from_string(m, true).unwrap();
 		let session = Session::from(matrix);
@@ -275,44 +326,69 @@ mod tests {
 
 		let expect = vec![
 			vec![Tile::Hidden(1); 4],
-			vec![Tile::Hidden(1), Tile::Hidden(0), Tile::Mine, Tile::Hidden(1)],
-			vec![Tile::Hidden(1), Tile::Hidden(0), Tile::Hidden(0), Tile::Hidden(1)],
+			vec![
+				Tile::Hidden(1),
+				Tile::Hidden(0),
+				Tile::Mine,
+				Tile::Hidden(1),
+			],
+			vec![
+				Tile::Hidden(1),
+				Tile::Hidden(0),
+				Tile::Hidden(0),
+				Tile::Hidden(1),
+			],
 			vec![Tile::Hidden(1); 4],
 		];
 
-		assert_eq!(format!("{:?}", session.get_board()), format!("{:?}", expect));
+		assert_eq!(
+			format!("{:?}", session.get_board()),
+			format!("{:?}", expect)
+		);
 	}
 
 	#[test]
 	// TODO: create a test that uses assert macro in some way.
-	fn session_debug_test() {
-		let session = Session::new(12, 12, 12);
+	fn session_print_outs_test() {
+		let session = Session::new(15, 12, 12);
+		dbg!(&session.board);
 		session.print_session();
+		session.print_answer();
 	}
 
 	#[test]
 	fn dfs_test() {
 		let max = 4;
 
-		let mut matrix: Vec<Vec<Tile>> = (0..max).map(|i| {
-			if i == 0 || i == max - 1 {
-				return vec![Tile::Hidden(1); max];
-			} else {
-				let mut item = vec![Tile::Hidden(0); max];
-				item[0] = Tile::Hidden(1);
-				item[max - 1] = Tile::Hidden(1);
-				return item;
-			}
-		}
-		)
-		                                         .collect();
+		let mut matrix: Vec<Vec<Tile>> = (0..max)
+			.map(|i| {
+				if i == 0 || i == max - 1 {
+					return vec![Tile::Hidden(1); max];
+				} else {
+					let mut item = vec![Tile::Hidden(0); max];
+					item[0] = Tile::Hidden(1);
+					item[max - 1] = Tile::Hidden(1);
+					return item;
+				}
+			})
+			.collect();
 
 		let mut sess = Session::from(matrix);
 
 		let expect = vec![
 			vec![Tile::Visible(1); 4],
-			vec![Tile::Visible(1), Tile::Visible(0), Tile::Visible(0), Tile::Visible(1)],
-			vec![Tile::Visible(1), Tile::Visible(0), Tile::Visible(0), Tile::Visible(1)],
+			vec![
+				Tile::Visible(1),
+				Tile::Visible(0),
+				Tile::Visible(0),
+				Tile::Visible(1),
+			],
+			vec![
+				Tile::Visible(1),
+				Tile::Visible(0),
+				Tile::Visible(0),
+				Tile::Visible(1),
+			],
 			vec![Tile::Visible(1); 4],
 		];
 
@@ -325,26 +401,36 @@ mod tests {
 	fn dfs_test_with_mine() {
 		let max = 4;
 
-		let mut matrix: Vec<Vec<Tile>> = (0..max).map(|i| {
-			if i == 0 || i == max - 1 {
-				return vec![Tile::Hidden(1); max];
-			} else {
-				let mut item = vec![Tile::Hidden(0); max];
-				item[0] = Tile::Hidden(1);
-				item[max - 1] = Tile::Hidden(1);
-				return item;
-			}
-		}
-		)
-		                                         .collect();
+		let mut matrix: Vec<Vec<Tile>> = (0..max)
+			.map(|i| {
+				if i == 0 || i == max - 1 {
+					return vec![Tile::Hidden(1); max];
+				} else {
+					let mut item = vec![Tile::Hidden(0); max];
+					item[0] = Tile::Hidden(1);
+					item[max - 1] = Tile::Hidden(1);
+					return item;
+				}
+			})
+			.collect();
 
 		let mut sess = Session::from(matrix);
 		sess.board[1][2] = Tile::Mine;
 
 		let expect = vec![
 			vec![Tile::Visible(1); 4],
-			vec![Tile::Visible(1), Tile::Visible(0), Tile::Mine, Tile::Visible(1)],
-			vec![Tile::Visible(1), Tile::Visible(0), Tile::Visible(0), Tile::Visible(1)],
+			vec![
+				Tile::Visible(1),
+				Tile::Visible(0),
+				Tile::Mine,
+				Tile::Visible(1),
+			],
+			vec![
+				Tile::Visible(1),
+				Tile::Visible(0),
+				Tile::Visible(0),
+				Tile::Visible(1),
+			],
 			vec![Tile::Visible(1); 4],
 		];
 
@@ -356,8 +442,7 @@ mod tests {
 
 	#[test]
 	fn dfs_test_with_island() {
-		let matrix =
-			"
+		let matrix = "
 1,1,1,1,1,1,1
 1,0,0,0,0,0,1
 1,0,X,X,X,0,1
@@ -381,25 +466,24 @@ mod tests {
 	fn test_show_answer() {
 		let max = 4;
 
-		let mut matrix: Vec<Vec<Tile>> = (0..max).map(|i| {
-			if i == 0 || i == max - 1 {
-				return vec![Tile::Hidden(1); max];
-			} else {
-				let mut item = vec![Tile::Hidden(0); max];
-				item[0] = Tile::Hidden(1);
-				item[max - 1] = Tile::Hidden(1);
-				return item;
-			}
-		}
-		)
-		                                         .collect();
+		let mut matrix: Vec<Vec<Tile>> = (0..max)
+			.map(|i| {
+				if i == 0 || i == max - 1 {
+					return vec![Tile::Hidden(1); max];
+				} else {
+					let mut item = vec![Tile::Hidden(0); max];
+					item[0] = Tile::Hidden(1);
+					item[max - 1] = Tile::Hidden(1);
+					return item;
+				}
+			})
+			.collect();
 
 		let mut sess = Session::from(matrix);
 		sess.board[1][2] = Tile::Mine;
 
 		assert_ne!(sess.print_session(), sess.print_answer());
 	}
-
 
 	#[test]
 	fn make_visible() {
