@@ -172,29 +172,29 @@ impl GameBoard {
 		for dir in Tile::gen_mine_coords(level, x_size, y_size) {
 			board.0[dir.0][dir.1] = Tile::Mine;
 			if set_proxy {
-				board.set_neighbor(dir.0, dir.1);
+				board.set_neighbor(dir.0 as isize, dir.1 as isize);
 			}
 		}
 
 		board
 	}
 
-	fn set_neighbor(&mut self, y: usize, x: usize) {
+	fn set_neighbor(&mut self, y: isize, x: isize) {
 		for dir in &Self::DIRS {
-			if y as isize + dir.0 < 0 || x as isize + dir.1 < 0 {
+			if y + dir.0 < 0 || x + dir.1 < 0 {
 				continue;
 			}
 
-			if self.0.get((y as isize + dir.0) as usize).is_some()
-				&& self.0[(y as isize + dir.0) as usize]
-				.get((x as isize + dir.1) as usize)
+			if self.0.get((y + dir.0) as usize).is_some()
+				&& self.0[(y + dir.0) as usize]
+				.get((x + dir.1) as usize)
 				.is_some()
 			{
-				if self.0[(y as isize + dir.0) as usize][(x as isize + dir.1) as usize].is_mine() {
+				if self.0[(y + dir.0) as usize][(x + dir.1) as usize].is_mine() {
 					continue;
 				}
-				self.0[(y as isize + dir.0) as usize][(x as isize + dir.1) as usize] =
-					match self.0[(y as isize + dir.0) as usize][(x as isize + dir.1) as usize] {
+				self.0[(y + dir.0) as usize][(x + dir.1) as usize] =
+					match self.0[(y + dir.0) as usize][(x + dir.1) as usize] {
 						Tile::Hidden(val) => Tile::Hidden(val + 1),
 						Tile::Visible(val) => Tile::Visible(val + 1),
 						_ => unreachable!(),
