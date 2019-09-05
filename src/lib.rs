@@ -51,6 +51,7 @@ trait Board {
 	/// create a new game blank board by X and Y size.
 	fn blank_board(n: usize, m: usize) -> Self::Item;
 
+	#[deprecated]
 	/// generate coordinates as a vector of tuples using `number` for the quantity of mines within a range of `n` and `m`.
 	///
 	/// returns `Vec<(usize,usize)>`
@@ -69,6 +70,7 @@ trait Board {
 	/// converts a string representation into a board of associated type
 	fn from_string<S: Into<String>>(input: S, hidden: bool) -> Self::Item;
 
+	#[deprecated]
 	fn get_neighbor(board: Self::Item, y: usize, x: usize) -> Self::Item;
 
 	const DIRS: [(isize, isize); 8] = [
@@ -169,7 +171,7 @@ impl GameBoard {
 	pub fn new(level: usize, x_size: usize, y_size: usize, set_proxy: bool) -> Self {
 		let mut board = GameBoard(Tile::blank_board(x_size, y_size).unwrap());
 
-		for dir in Tile::gen_mine_coords(level, x_size, y_size) {
+		for dir in Self::gen_mine_coords(level, x_size, y_size) {
 			board.0[dir.0][dir.1] = Tile::Mine;
 			if set_proxy {
 				board.set_neighbor(dir.0 as isize, dir.1 as isize);
@@ -177,6 +179,21 @@ impl GameBoard {
 		}
 
 		board
+	}
+
+	/// generate coordinates as a vector of tuples using `number` for the quantity of mines within a range of `n` and `m`.
+	///
+	/// returns `Vec<(usize,usize)>`
+	///
+	fn gen_mine_coords(number: usize, n: usize, m: usize) -> Vec<(usize, usize)> {
+		let mut cords = vec![];
+		while cords.len() < number {
+			let mut c = (thread_rng().gen_range(0, n), thread_rng().gen_range(0, m));
+			if !cords.contains(&c) {
+				cords.push(c)
+			}
+		}
+		cords
 	}
 
 	fn set_neighbor(&mut self, y: isize, x: isize) {
