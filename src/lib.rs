@@ -21,7 +21,7 @@ impl Tile {
 
 	fn is_mine(&self) -> bool {
 		if let Tile::Mine = self {
-			return true
+			return true;
 		}
 		false
 	}
@@ -47,7 +47,7 @@ trait Board {
 	type Item;
 
 	/// create a new game board by X and Y size.
-	fn new_board(level: usize, x_size: usize, y_size: usize, set_proxy: bool) -> Self::Item;
+	fn new_board(level: usize, x_size: usize, y_size: usize) -> Self::Item;
 	/// create a new game blank board by X and Y size.
 	fn blank_board(n: usize, m: usize) -> Self::Item;
 
@@ -71,34 +71,29 @@ trait Board {
 
 	fn get_neighbor(board: Self::Item, y: usize, x: usize) -> Self::Item;
 
-	const DIRS: [(isize, isize); 8] =
-		[
-			(-1, 0),
-			(-1, 1),
-			(0, 1),
-			(1, 1),
-			(1, 0),
-			(1, -1),
-			(0, -1),
-			(-1, -1),
-		];
-
+	const DIRS: [(isize, isize); 8] = [
+		(-1, 0),
+		(-1, 1),
+		(0, 1),
+		(1, 1),
+		(1, 0),
+		(1, -1),
+		(0, -1),
+		(-1, -1),
+	];
 }
 
 impl Board for Tile {
 	type Item = io::Result<Vec<Vec<Tile>>>;
 
 	/// create a new game board by X and Y size with mine randomly place.
-	fn new_board(level: usize, x_size: usize, y_size: usize, set_proxy: bool) -> Self::Item {
+	fn new_board(level: usize, x_size: usize, y_size: usize) -> Self::Item {
 		let mut board = Self::blank_board(x_size, y_size)?;
 
 		let mines = Self::gen_mine_coords(level, x_size, y_size);
 
 		for c in &mines {
 			board[c.0][c.1] = Tile::Mine;
-			if set_proxy {
-				board = Self::get_neighbor(Ok(board), c.0, c.1).unwrap();
-			}
 		}
 
 		Ok(board)
@@ -141,26 +136,114 @@ impl Board for Tile {
 		}
 		let mut board = board.unwrap();
 
-
 		for dir in &Self::DIRS {
 			if y as isize + dir.0 < 0 || x as isize + dir.1 < 0 {
-				continue
+				continue;
 			}
 
-			if board.get((y as isize + dir.0) as usize).is_some() && board[(y as isize + dir.0) as usize].get((x as isize + dir.1) as usize).is_some() {
+			if board.get((y as isize + dir.0) as usize).is_some()
+				&& board[(y as isize + dir.0) as usize]
+				.get((x as isize + dir.1) as usize)
+				.is_some()
+			{
 				if board[(y as isize + dir.0) as usize][(x as isize + dir.1) as usize].is_mine() {
-					continue
+					continue;
 				}
-				board[(y as isize + dir.0) as usize][(x as isize + dir.1) as usize] = match board[(y as isize + dir.0) as usize][(x as isize + dir.1) as usize] {
-					Tile::Hidden(val) => Tile::Hidden(val + 1),
-					Tile::Visible(val) => Tile::Visible(val + 1),
-					_ => unreachable!()
-				};
+				board[(y as isize + dir.0) as usize][(x as isize + dir.1) as usize] =
+					match board[(y as isize + dir.0) as usize][(x as isize + dir.1) as usize] {
+						Tile::Hidden(val) => Tile::Hidden(val + 1),
+						Tile::Visible(val) => Tile::Visible(val + 1),
+						_ => unreachable!(),
+					};
 			}
 		}
 
 		Ok(board)
 	}
+}
+
+#[derive(Debug)]
+struct GameBoard(Vec<Vec<Tile>>);
+
+impl GameBoard {
+	pub fn new(level: usize, x_size: usize, y_size: usize, set_proxy: bool) -> Self {
+		let mut board = GameBoard(Tile::blank_board(x_size, y_size).unwrap());
+
+		for dir in Tile::gen_mine_coords(level, x_size, y_size) {
+			board.0[dir.0][dir.1] = Tile::Mine;
+			if set_proxy {
+				board.set_neighbor(dir.0, dir.1);
+			}
+		}
+
+		board
+	}
+
+	fn set_neighbor(&mut self, y: usize, x: usize) {
+		for dir in &Self::DIRS {
+			if y as isize + dir.0 < 0 || x as isize + dir.1 < 0 {
+				continue;
+			}
+
+			if self.0.get((y as isize + dir.0) as usize).is_some()
+				&& self.0[(y as isize + dir.0) as usize]
+				.get((x as isize + dir.1) as usize)
+				.is_some()
+			{
+				if self.0[(y as isize + dir.0) as usize][(x as isize + dir.1) as usize].is_mine() {
+					continue;
+				}
+				self.0[(y as isize + dir.0) as usize][(x as isize + dir.1) as usize] =
+					match self.0[(y as isize + dir.0) as usize][(x as isize + dir.1) as usize] {
+						Tile::Hidden(val) => Tile::Hidden(val + 1),
+						Tile::Visible(val) => Tile::Visible(val + 1),
+						_ => unreachable!(),
+					};
+			}
+		}
+	}
+
+	fn dfs(&mut self, x: usize, y: usize) {
+		//check if tile is invalid
+
+		if !self.0[y][x].dfs_valid() {
+			return;
+		}
+
+		// if valid then the tile will be swapped to visible.
+		self.0[y][x].set_visible();
+
+		// look up
+		if y as isize - 1 >= 0 && self.0.get(y - 1).is_some() && self.0[y].get(x).is_some() {
+			self.dfs(x, y - 1);
+		}
+
+		// look down
+		if self.0.get(y + 1).is_some() && self.0[y].get(x).is_some() {
+			self.dfs(x, y + 1);
+		}
+
+		// look right
+		if self.0.get(y).is_some() && self.0[y].get(x + 1).is_some() {
+			self.dfs(x + 1, y);
+		}
+
+		// look left
+		if x as isize - 1 >= 0 && self.0.get(y).is_some() && self.0[y].get(x - 1).is_some() {
+			self.dfs(x - 1, y);
+		}
+	}
+
+	const DIRS: [(isize, isize); 8] = [
+		(-1, 0),
+		(-1, 1),
+		(0, 1),
+		(1, 1),
+		(1, 0),
+		(1, -1),
+		(0, -1),
+		(-1, -1),
+	];
 }
 
 #[derive(Debug)]
@@ -177,7 +260,7 @@ pub struct MineSweeper {
 pub struct Session {
 	des: String,
 	state: State,
-	board: Vec<Vec<Tile>>,
+	board: GameBoard,
 	score: u32,
 }
 
@@ -187,7 +270,7 @@ impl Session {
 			des: "Test".to_string(),
 			state: State::Active,
 			score: 0,
-			board: Tile::new_board(level, x_size, y_size, true).unwrap(),
+			board: GameBoard::new(level, x_size, y_size, true),
 		}
 	}
 
@@ -196,19 +279,19 @@ impl Session {
 			des: "Test".to_string(),
 			state: State::Active,
 			score: 0,
-			board,
+			board: GameBoard(board),
 		}
 	}
 
 	pub fn get_board(&self) -> Vec<Vec<Tile>> {
-		self.board.clone()
+		self.board.0.clone()
 	}
 
 	pub fn check_cord(&mut self, x: usize, y: usize) {
-		match self.board[y][x] {
+		match self.board.0[y][x] {
 			Tile::Hidden(val) => {
 				println!("Safe: {}", &val);
-				self.board[y][x] = Tile::Visible(val)
+				self.board.0[y][x] = Tile::Visible(val)
 			}
 			Tile::Mine => println!("Boom!"),
 			Tile::Visible(_) => {}
@@ -218,7 +301,7 @@ impl Session {
 	pub fn print_session(&self) -> String {
 		let mut board = String::new();
 		board.push('\n');
-		for row in self.board.clone() {
+		for row in self.board.0.clone() {
 			for col in row {
 				match col {
 					Tile::Mine => board.push_str("[ ]"),
@@ -238,7 +321,7 @@ impl Session {
 	pub fn print_answer(&self) -> String {
 		let mut board = String::new();
 		board.push('\n');
-		for row in self.board.clone() {
+		for row in self.board.0.clone() {
 			for col in row {
 				match col {
 					Tile::Mine => board.push_str("[B]"),
@@ -255,40 +338,10 @@ impl Session {
 	}
 
 	pub fn reveal(&mut self, x: usize, y: usize) {
-		match self.board[y][x] {
+		match self.board.0[y][x] {
 			Tile::Mine => self.state = State::Lose,
 			Tile::Visible(_) => println!("Tile is already visable."),
-			Tile::Hidden(_) => Self::dfs(&mut self.board, x, y),
-		}
-	}
-
-	fn dfs(board: &mut Vec<Vec<Tile>>, x: usize, y: usize) {
-		//check if tile is invalid
-		if !board[y][x].dfs_valid() {
-			return;
-		}
-
-		// if valid then the tile will be swapped to visible.
-		board[y][x].set_visible();
-
-		// look up
-		if y as isize - 1 >= 0 && board.get(y - 1).is_some() && board[y].get(x).is_some() {
-			Self::dfs(board, x, y - 1);
-		}
-
-		// look down
-		if board.get(y + 1).is_some() && board[y].get(x).is_some() {
-			Self::dfs(board, x, y + 1);
-		}
-
-		// look right
-		if board.get(y).is_some() && board[y].get(x + 1).is_some() {
-			Self::dfs(board, x + 1, y);
-		}
-
-		// look left
-		if x as isize - 1 >= 0 && board.get(y).is_some() && board[y].get(x - 1).is_some() {
-			Self::dfs(board, x - 1, y);
+			Tile::Hidden(_) => self.board.dfs(x, y),
 		}
 	}
 }
@@ -296,7 +349,7 @@ impl Session {
 impl Debug for Session {
 	fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
 		let mut board = String::new();
-		for line in self.board.clone() {
+		for line in self.board.0.clone() {
 			board.push_str(format!("{:?}\n", line).as_str());
 		}
 		write!(f, "\n{}", board)
@@ -351,7 +404,7 @@ mod tests {
 	// TODO: create a test that uses assert macro in some way.
 	fn session_print_outs_test() {
 		let session = Session::new(15, 12, 12);
-		dbg!(&session.board);
+		dbg!(&session.board.0);
 		session.print_session();
 		session.print_answer();
 	}
@@ -415,7 +468,7 @@ mod tests {
 			.collect();
 
 		let mut sess = Session::from(matrix);
-		sess.board[1][2] = Tile::Mine;
+		sess.board.0[1][2] = Tile::Mine;
 
 		let expect = vec![
 			vec![Tile::Visible(1); 4],
@@ -434,8 +487,10 @@ mod tests {
 			vec![Tile::Visible(1); 4],
 		];
 
+		sess.print_session();
 		sess.reveal(0, 0);
-		dbg!(&sess.board);
+		sess.print_session();
+		//        dbg!(&sess.board);
 
 		assert_eq!(format!("{:?}", sess.get_board()), format!("{:?}", expect));
 	}
@@ -480,7 +535,7 @@ mod tests {
 			.collect();
 
 		let mut sess = Session::from(matrix);
-		sess.board[1][2] = Tile::Mine;
+		sess.board.0[1][2] = Tile::Mine;
 
 		assert_ne!(sess.print_session(), sess.print_answer());
 	}
