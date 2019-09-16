@@ -1,5 +1,5 @@
 use rand::{thread_rng, Rng};
-use std::collections::HashSet;
+
 use std::fmt::Debug;
 use std::{fmt, io};
 use colored::Colorize;
@@ -67,7 +67,7 @@ pub trait Board {
 	fn gen_mine_coords(number: usize, n: usize, m: usize) -> Vec<(usize, usize)> {
 		let mut cords = vec![];
 		while cords.len() < number {
-			let mut c = (thread_rng().gen_range(0, n), thread_rng().gen_range(0, m));
+			let c = (thread_rng().gen_range(0, n), thread_rng().gen_range(0, m));
 			if !cords.contains(&c) {
 				cords.push(c)
 			}
@@ -197,7 +197,7 @@ impl GameBoard {
 	fn gen_mine_coords(number: usize, n: usize, m: usize) -> Vec<(usize, usize)> {
 		let mut cords = vec![];
 		while cords.len() < number {
-			let mut c = (thread_rng().gen_range(0, n), thread_rng().gen_range(0, m));
+			let c = (thread_rng().gen_range(0, n), thread_rng().gen_range(0, m));
 			if !cords.contains(&c) {
 				cords.push(c)
 			}
