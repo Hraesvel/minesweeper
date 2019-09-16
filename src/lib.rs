@@ -2,6 +2,7 @@ use rand::{thread_rng, Rng};
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::{fmt, io};
+use colored::Colorize;
 
 #[derive(Clone)]
 pub enum Tile {
@@ -17,6 +18,13 @@ impl Tile {
 			Tile::Mine => false,
 			_ => true,
 		}
+	}
+
+	pub fn unwrap(&self) -> u8 {
+		if let Self::Hidden(val) = self {
+			return *val;
+		}
+		return 0;
 	}
 
 	fn is_mine(&self) -> bool {
@@ -221,10 +229,13 @@ impl GameBoard {
 		}
 	}
 
-	fn dfs(&mut self, x: usize, y: usize) {
+	fn dfs(&mut self, x: usize, y: usize, is_first: bool) {
 		//check if tile is invalid
 
 		if !self.0[y][x].dfs_valid() {
+			return;
+		} else if self.0[y][x].unwrap() > 0 && !is_first {
+			self.0[y][x].set_visible();
 			return;
 		}
 
@@ -233,22 +244,22 @@ impl GameBoard {
 
 		// look up
 		if y as isize - 1 >= 0 && self.0.get(y - 1).is_some() && self.0[y].get(x).is_some() {
-			self.dfs(x, y - 1);
+			self.dfs(x, y - 1, false);
 		}
 
 		// look down
 		if self.0.get(y + 1).is_some() && self.0[y].get(x).is_some() {
-			self.dfs(x, y + 1);
+			self.dfs(x, y + 1, false);
 		}
 
 		// look right
 		if self.0.get(y).is_some() && self.0[y].get(x + 1).is_some() {
-			self.dfs(x + 1, y);
+			self.dfs(x + 1, y, false);
 		}
 
 		// look left
 		if x as isize - 1 >= 0 && self.0.get(y).is_some() && self.0[y].get(x - 1).is_some() {
-			self.dfs(x - 1, y);
+			self.dfs(x - 1, y, false);
 		}
 	}
 
@@ -309,15 +320,20 @@ impl Session {
 		self.board.0.clone()
 	}
 
-	pub fn check_cord(&mut self, x: usize, y: usize) {
+	pub fn check_cord(&mut self, x: usize, y: usize) -> bool {
 		match self.board.0[y][x] {
 			Tile::Hidden(val) => {
 				println!("Safe: {}", &val);
+				self.reveal(x, y);
 				self.board.0[y][x] = Tile::Visible(val)
 			}
-			Tile::Mine => println!("Boom!"),
-			Tile::Visible(_) => {}
+			Tile::Mine => {
+				println!("Boom!");
+				return false;
+			},
+			Tile::Visible(_) => println!("Already Visible")
 		}
+		true
 	}
 
 	pub fn print_session(&self) -> String {
@@ -358,11 +374,26 @@ impl Session {
 		board
 	}
 
+	pub fn print_answer_fancy(&self) {
+		let mut board = String::new();
+		board.push('\n');
+		for row in self.board.0.clone() {
+			for col in row {
+				match col {
+					Tile::Mine => print!("[{}]", "B".red()),
+					Tile::Hidden(val) => print!("[{}]", val),
+					Tile::Visible(val) => print!("[{}]", val.to_string().green()),
+				}
+			}
+			println!();
+		}
+	}
+
 	pub fn reveal(&mut self, x: usize, y: usize) {
 		match self.board.0[y][x] {
 			Tile::Mine => self.state = State::Lose,
 			Tile::Visible(_) => println!("Tile is already visable."),
-			Tile::Hidden(_) => self.board.dfs(x, y),
+			Tile::Hidden(_) => self.board.dfs(x, y, true),
 		}
 	}
 }
