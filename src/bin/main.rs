@@ -1,6 +1,6 @@
 use minesweeper::*;
 use std::io;
-use std::io::{Write, Split};
+use std::io::{Split, Write};
 
 fn main() -> io::Result<()> {
 	let mut buf = String::with_capacity(8);
@@ -24,5 +24,6 @@ fn main() -> io::Result<()> {
 		}
 		buf.clear();
 	}
+
 	Ok(())
 }
