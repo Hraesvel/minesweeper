@@ -53,6 +53,10 @@ impl Session {
 		true
 	}
 
+	pub fn print_score(&self) {
+		println!("Score: {}", self.score);
+	}
+
 	pub fn print_session(&self) -> String {
 		let mut board = String::new();
 		board.push('\n');
@@ -110,7 +114,7 @@ impl Session {
 		match self.board.0[y][x] {
 			Tile::Mine => self.state = State::Lose,
 			Tile::Visible(_) => println!("Tile is already visable."),
-			Tile::Hidden(_) => self.board.dfs(x, y, true),
+			Tile::Hidden(_) => self.score += self.board.dfs(x, y, true),
 		}
 	}
 }

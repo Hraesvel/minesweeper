@@ -67,14 +67,15 @@ impl GameBoard {
 		}
 	}
 
-	fn dfs(&mut self, x: usize, y: usize, is_first: bool) {
+	fn dfs(&mut self, x: usize, y: usize, is_first: bool) -> u32 {
 		//check if tile is invalid
+		let mut score = 0;
 
 		if !self.0[y][x].dfs_valid() {
-			return;
+			return 0;
 		} else if self.0[y][x].unwrap() > 0 && !is_first {
 			self.0[y][x].set_visible();
-			return;
+			return 1;
 		}
 
 		// if valid then the tile will be swapped to visible.
@@ -82,23 +83,25 @@ impl GameBoard {
 
 		// look up
 		if y as isize - 1 >= 0 && self.0.get(y - 1).is_some() && self.0[y].get(x).is_some() {
-			self.dfs(x, y - 1, false);
+			score += self.dfs(x, y - 1, false);
 		}
 
 		// look down
 		if self.0.get(y + 1).is_some() && self.0[y].get(x).is_some() {
-			self.dfs(x, y + 1, false);
+			score += self.dfs(x, y + 1, false);
 		}
 
 		// look right
 		if self.0.get(y).is_some() && self.0[y].get(x + 1).is_some() {
-			self.dfs(x + 1, y, false);
+			score += self.dfs(x + 1, y, false);
 		}
 
 		// look left
 		if x as isize - 1 >= 0 && self.0.get(y).is_some() && self.0[y].get(x - 1).is_some() {
-			self.dfs(x - 1, y, false);
+			score += self.dfs(x - 1, y, false);
 		}
+
+		score
 	}
 
 	const DIRS: [(isize, isize); 8] = [
@@ -131,7 +134,7 @@ impl MineSweeper {
 		}
 	}
 
-	pub fn start_session(&mut self) {
+	pub fn start_session(&mut self, level: u8) {
 //		self.session = Session::new();
 	}
 }

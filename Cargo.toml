@@ -8,6 +8,8 @@ edition = "2018"
 
 #[lib]
 #crate-type = ["cdylib"]
+[workspace]
+members = ["./minesweeper_wasm"]
 
 [dependencies]
 rand = "0.7.0"

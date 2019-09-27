@@ -7,6 +7,7 @@ fn main() -> io::Result<()> {
 	let mut stdout = io::stdout();
 	let mut session = Session::new(60, 24, 24);
 	loop {
+		session.print_score();
 		session.print_session();
 		stdout.lock().write_all(b"$> ")?;
 		stdout.flush()?;
@@ -17,6 +18,7 @@ fn main() -> io::Result<()> {
 			let x = token.next().unwrap().parse().expect("Num");
 			let y = token.next().unwrap().parse().expect("Num");
 			if !session.check_cord(x, y) {
+				session.print_score();
 				session.print_answer_fancy();
 				println!("You Dead!");
 				break;
