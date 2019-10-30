@@ -2,6 +2,7 @@ use crate::Board;
 use std::fmt::Debug;
 use std::{fmt, io};
 
+/// Data Type that is used to represent a tile on a game board.
 #[derive(Clone)]
 pub enum Tile {
 	Mine,
@@ -10,6 +11,8 @@ pub enum Tile {
 }
 
 impl Tile {
+	/// This method check if a tile is valid,
+	/// invalid tiles are anything that isn't `Tile::Hidden(u8)`
 	pub fn dfs_valid(&self) -> bool {
 		match self {
 			Tile::Visible(_) => false,
