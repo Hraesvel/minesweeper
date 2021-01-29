@@ -6,7 +6,7 @@ mod tests {
     // TODO: create a test that uses assert macro in some way.
     fn session_print_outs_test() {
         let mut session = Session::new(15, 12, 12);
-        dbg!(&session.board());
+        dbg!(&session.mut_board());
         session.print_session();
         session.print_answer();
     }
@@ -148,7 +148,7 @@ mod tests {
             .collect();
 
         let mut sess = Session::from(matrix);
-        sess.board()[1][2] = Tile::Mine;
+        sess.mut_board()[1][2] = Tile::Mine;
 
         assert_ne!(sess.print_session(), sess.print_answer());
     }
