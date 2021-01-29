@@ -29,7 +29,7 @@ impl Session {
         }
     }
 
-    pub fn board(&mut self) -> &mut Vec<Vec<Tile>> {
+    pub fn mut_board(&mut self) -> &mut Vec<Vec<Tile>> {
         &mut self.board.0
     }
 
