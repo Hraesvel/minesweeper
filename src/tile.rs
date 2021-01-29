@@ -15,10 +15,10 @@ impl Tile {
     /// This method check if a tile is valid,
     /// invalid tiles are anything that isn't `Tile::Hidden(u8)`
     pub fn dfs_valid(&self) -> bool {
-        match self {
-            Tile::Visible(_) => false,
-            Tile::Mine => false,
-            _ => true,
+        if let Tile::Hidden(_) = self {
+            true
+        } else {
+            false
         }
     }
 

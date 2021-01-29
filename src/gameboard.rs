@@ -1,5 +1,6 @@
-use crate::{Board, Tile};
 use rand::{thread_rng, Rng};
+
+use crate::{Board, Tile};
 
 #[derive(Debug)]
 pub struct GameBoard(pub Vec<Vec<Tile>>);
@@ -44,15 +45,14 @@ impl GameBoard {
                     .get((x + dir.1) as usize)
                     .is_some()
             {
-                if self.0[(y + dir.0) as usize][(x + dir.1) as usize].is_mine() {
-                    continue;
-                }
-                self.0[(y + dir.0) as usize][(x + dir.1) as usize] =
-                    match self.0[(y + dir.0) as usize][(x + dir.1) as usize] {
-                        Tile::Hidden(val) => Tile::Hidden(val + 1),
-                        Tile::Visible(val) => Tile::Visible(val + 1),
+                let check = &mut self.0[(y + dir.0) as usize][(x + dir.1) as usize];
+                if !check.is_mine() {
+                    *check = match check {
+                        Tile::Hidden(val) => Tile::Hidden(*val + 1),
+                        Tile::Visible(val) => Tile::Visible(*val + 1),
                         _ => unreachable!(),
                     };
+                }
             }
         }
     }
@@ -61,6 +61,7 @@ impl GameBoard {
         &self.0[y_cord][x_cord]
     }
 
+    /// Recursive dfs method
     pub fn dfs(&mut self, x: usize, y: usize, is_init: bool) -> u32 {
         //check if tile is invalid
         let mut score = 0;
