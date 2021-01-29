@@ -4,7 +4,7 @@ pub trait Board {
 	type Item;
 
 	/// create a new game board by X and Y size.
-	fn new_board(level: usize, x_size: usize, y_size: usize) -> Self::Item;
+	fn new_board(level: usize, x_size: usize, y_size: usize, mines: Vec<(usize, usize)>) -> Self::Item;
 	/// create a new game blank board by X and Y size.
 	fn blank_board(n: usize, m: usize) -> Self::Item;
 
