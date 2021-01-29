@@ -1,7 +1,5 @@
 use minesweeper as ms;
 
-
-
 #[cfg(test)]
 mod tests {
     #[test]
