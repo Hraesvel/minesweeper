@@ -109,7 +109,9 @@ impl Session {
             println!();
         }
     }
-
+    // reveal a tile that the coordnates given.
+    // If it is a hidden tiles the method will perform a recursive dfs on to its neighbors and accumulate the score.
+    // other cases are that of a mine (game over) or a previously released tile which will  prompt a message.
     pub fn reveal(&mut self, x: usize, y: usize) {
         match self.board.0[y][x] {
             Tile::Mine => self.state = State::Lose,
