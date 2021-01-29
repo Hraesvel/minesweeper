@@ -98,35 +98,4 @@ impl Board for Tile {
 			.collect();
 		Ok(board)
 	}
-
-	fn get_neighbor(board: Self::Item, y: usize, x: usize) -> Self::Item {
-		if board.is_err() {
-			panic!("Error: {:?}", board);
-		}
-		let mut board = board.unwrap();
-
-		for dir in &Self::DIRS {
-			if y as isize + dir.0 < 0 || x as isize + dir.1 < 0 {
-				continue;
-			}
-
-			if board.get((y as isize + dir.0) as usize).is_some()
-				&& board[(y as isize + dir.0) as usize]
-				.get((x as isize + dir.1) as usize)
-				.is_some()
-			{
-				if board[(y as isize + dir.0) as usize][(x as isize + dir.1) as usize].is_mine() {
-					continue;
-				}
-				board[(y as isize + dir.0) as usize][(x as isize + dir.1) as usize] =
-					match board[(y as isize + dir.0) as usize][(x as isize + dir.1) as usize] {
-						Tile::Hidden(val) => Tile::Hidden(val + 1),
-						Tile::Visible(val) => Tile::Visible(val + 1),
-						_ => unreachable!(),
-					};
-			}
-		}
-
-		Ok(board)
-	}
 }
